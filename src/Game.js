@@ -4,7 +4,9 @@ import { ObstacleManager } from './ObstacleManager.js';
 
 const HIGH_SCORE_KEY = 'cyberRunnerHighScore';
 const BASE_SPEED = 12;
-const PLAYER_START_Y = 0.65;
+const MAX_SPEED = 60;
+
+const SPAWN_INTERVALS = { 1: 1.2, 2: 1.0, 3: 0.75, 4: 0.55 };
 
 export class Game {
     constructor() {
@@ -30,6 +32,7 @@ export class Game {
         this.elapsedTime = 0;
         this.floatingCubes = [];
         this.neonPanels = [];
+        this.animationId = null;
 
         const storedHighScore = Number(localStorage.getItem(HIGH_SCORE_KEY));
 
@@ -47,6 +50,7 @@ export class Game {
 
         this.startScreenElement = document.getElementById('startScreen');
         this.gameOverPanelElement = document.getElementById('gameOverPanel');
+        this.bottomControlsElement = document.getElementById('bottomControls');
         this.scoreElement = document.getElementById('score');
         this.highScoreElement = document.getElementById('highScore');
         this.fragmentsElement = document.getElementById('fragments');
@@ -322,6 +326,7 @@ export class Game {
         this.isGameOver = false;
         this.startScreenElement.classList.add('hidden');
         this.gameOverPanelElement.classList.add('hidden');
+        this.bottomControlsElement.textContent = 'A/D MOVE';
         this.clock.getDelta();
     }
 
@@ -344,14 +349,14 @@ export class Game {
     updateHud() {
         this.phase = this.getPhase();
 
-        this.scoreElement.innerText = Math.floor(this.score).toString();
-        this.highScoreElement.innerText = this.highScore.toString();
-        this.fragmentsElement.innerText = Math.floor(this.fragments).toString();
-        this.phaseElement.innerText = this.phase.toString();
+        this.scoreElement.textContent = Math.floor(this.score).toString();
+        this.highScoreElement.textContent = this.highScore.toString();
+        this.fragmentsElement.textContent = Math.floor(this.fragments).toString();
+        this.phaseElement.textContent = this.phase.toString();
 
-        const speedPercent = THREE.MathUtils.clamp((this.speed / 30) * 100, 0, 100);
+        const speedPercent = THREE.MathUtils.clamp((this.speed / MAX_SPEED) * 100, 0, 100);
         this.speedFillElement.style.width = `${speedPercent}%`;
-        this.velocityElement.innerText = `${Math.floor(this.speed * 20)} KPH`;
+        this.velocityElement.textContent = `${Math.floor(this.speed * 20)} KPH`;
     }
 
     checkCollision() {
@@ -377,9 +382,10 @@ export class Game {
         }
 
         this.updateHud();
-        this.finalScoreElement.innerText = currentScore.toString();
-        this.gameOverHighScoreElement.innerText = this.highScore.toString();
+        this.finalScoreElement.textContent = currentScore.toString();
+        this.gameOverHighScoreElement.textContent = this.highScore.toString();
         this.gameOverPanelElement.classList.remove('hidden');
+        this.bottomControlsElement.textContent = 'SPACE RESTART';
     }
 
     restart() {
@@ -390,15 +396,11 @@ export class Game {
         this.fragments = 0;
         this.phase = 1;
 
-        this.player.currentLane = 1;
-        this.player.targetX = 0;
-        this.player.hoverTime = 0;
-        this.player.mesh.position.set(0, PLAYER_START_Y, 4);
-        this.player.mesh.rotation.set(0, 0, 0);
-
+        this.player.reset();
         this.obstacleManager.reset();
         this.startScreenElement.classList.add('hidden');
         this.gameOverPanelElement.classList.add('hidden');
+        this.bottomControlsElement.textContent = 'A/D MOVE';
         this.updateHud();
         this.clock.getDelta();
     }
@@ -407,15 +409,20 @@ export class Game {
         this.animate();
     }
 
-    animate() {
-        requestAnimationFrame(() => this.animate());
+    stop() {
+        cancelAnimationFrame(this.animationId);
+    }
 
-        const deltaTime = this.clock.getDelta();
+    animate() {
+        this.animationId = requestAnimationFrame(() => this.animate());
+
+        // Cap deltaTime so tab-switch spikes don't explode physics
+        const deltaTime = Math.min(this.clock.getDelta(), 0.05);
         this.updateEnvironment(deltaTime);
 
         if (this.isStarted && !this.isGameOver) {
             this.score += deltaTime * 10;
-            this.speed += deltaTime * 0.2;
+            this.speed = Math.min(this.speed + deltaTime * 0.2, MAX_SPEED);
             this.fragments = THREE.MathUtils.clamp(
                 this.fragments + deltaTime * 2,
                 0,
@@ -427,10 +434,12 @@ export class Game {
             this.checkCollision();
             this.updateHud();
 
-            this.camera.position.x +=
-                (this.player.mesh.position.x * 0.25 - this.camera.position.x) *
-                3 *
-                deltaTime;
+            // Scale spawn rate with phase for smoother difficulty curve
+            this.obstacleManager.spawnInterval = SPAWN_INTERVALS[this.phase];
+
+            // Exponential-decay camera follow — framerate-independent
+            const targetCamX = this.player.mesh.position.x * 0.25;
+            this.camera.position.x += (targetCamX - this.camera.position.x) * (1 - Math.exp(-3 * deltaTime));
 
             this.camera.lookAt(this.player.mesh.position.x, 0, 0);
         }

@@ -118,6 +118,15 @@ export class ObstacleManager {
         return obstacle;
     }
 
+    // Frees GPU memory for every mesh inside an obstacle group
+    disposeObstacle(obstacle) {
+        obstacle.traverse((child) => {
+            if (child.isMesh || child.isLineSegments) {
+                child.geometry.dispose();
+            }
+        });
+    }
+
     spawn() {
         const lane = this.lanes[Math.floor(Math.random() * this.lanes.length)];
         const obstacleFactories = [
@@ -166,6 +175,7 @@ export class ObstacleManager {
             }
 
             if (obstacle.position.z > 10) {
+                this.disposeObstacle(obstacle);
                 this.scene.remove(obstacle);
                 this.obstacles.splice(i, 1);
             }
@@ -174,10 +184,12 @@ export class ObstacleManager {
 
     reset() {
         for (const obstacle of this.obstacles) {
+            this.disposeObstacle(obstacle);
             this.scene.remove(obstacle);
         }
 
         this.obstacles = [];
         this.spawnTimer = 0;
+        this.spawnInterval = 1.2;
     }
 }

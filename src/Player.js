@@ -132,15 +132,29 @@ export class Player {
         }
     }
 
+    reset() {
+        this.currentLane = 1;
+        this.targetX = 0;
+        this.hoverTime = 0;
+        this.mesh.position.set(0, PLAYER_START_Y, 4);
+        this.mesh.rotation.set(0, 0, 0);
+    }
+
     update(deltaTime) {
         this.hoverTime += deltaTime;
 
         const previousX = this.mesh.position.x;
-        this.mesh.position.x += (this.targetX - this.mesh.position.x) * 10 * deltaTime;
+
+        // Exponential-decay lerp — framerate-independent lane switching
+        this.mesh.position.x += (this.targetX - this.mesh.position.x) * (1 - Math.exp(-10 * deltaTime));
         this.mesh.position.y = PLAYER_START_Y + Math.sin(this.hoverTime * 5) * 0.045;
 
         const laneVelocity = this.mesh.position.x - previousX;
-        this.mesh.rotation.z = THREE.MathUtils.lerp(this.mesh.rotation.z, -laneVelocity * 1.8, 8 * deltaTime);
+        this.mesh.rotation.z = THREE.MathUtils.lerp(
+            this.mesh.rotation.z,
+            -laneVelocity * 1.8,
+            1 - Math.exp(-8 * deltaTime)
+        );
         this.mesh.rotation.x = Math.sin(this.hoverTime * 3) * 0.025;
 
         for (const engineGlow of this.engineGlowMeshes) {
