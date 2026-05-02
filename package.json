@@ -1,0 +1,18 @@
+{
+  "name": "cyber-runner-3d",
+  "version": "1.0.0",
+  "description": "Cyber Runner 3D - Three.js Game",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": ["threejs", "webgl", "game"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "three": "^0.184.0",
+    "vite": "^8.0.10"
+  }
+}
