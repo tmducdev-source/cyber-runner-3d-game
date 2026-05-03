@@ -5,6 +5,9 @@ import { ObstacleManager } from './ObstacleManager.js';
 const HIGH_SCORE_KEY = 'cyberRunnerHighScore';
 const BASE_SPEED = 12;
 const MAX_SPEED = 60;
+const BOOST_MULTIPLIER = 1.45;
+const BOOST_DURATION = 1.25;
+const BOOST_COOLDOWN = 2.1;
 
 const SPAWN_INTERVALS = { 1: 1.2, 2: 1.0, 3: 0.75, 4: 0.55 };
 
@@ -44,6 +47,8 @@ export class Game {
         this.phase = 1;
         this.isStarted = false;
         this.isGameOver = false;
+        this.boostTimeRemaining = 0;
+        this.boostCooldownRemaining = 0;
 
         this.player = new Player(this.scene);
         this.obstacleManager = new ObstacleManager(this.scene);
@@ -51,6 +56,12 @@ export class Game {
         this.startScreenElement = document.getElementById('startScreen');
         this.gameOverPanelElement = document.getElementById('gameOverPanel');
         this.bottomControlsElement = document.getElementById('bottomControls');
+        this.virtualControlsElement = document.getElementById('virtualControls');
+        this.startButtonElement = document.getElementById('startButton');
+        this.restartButtonElement = document.getElementById('restartButton');
+        this.boostButtonElement = document.getElementById('boostButton');
+        this.moveLeftButtonElement = document.getElementById('moveLeftButton');
+        this.moveRightButtonElement = document.getElementById('moveRightButton');
         this.scoreElement = document.getElementById('score');
         this.highScoreElement = document.getElementById('highScore');
         this.fragmentsElement = document.getElementById('fragments');
@@ -67,6 +78,7 @@ export class Game {
         this.createCyberEnvironment();
         this.setupInput();
         this.setupResize();
+        this.updateControlState();
     }
 
     createLights() {
@@ -286,30 +298,192 @@ export class Game {
         window.addEventListener('keydown', (event) => {
             if (event.code === 'Space') {
                 event.preventDefault();
-
-                if (!this.isStarted) {
-                    this.beginGame();
-                    return;
-                }
-
-                if (this.isGameOver) {
-                    this.restart();
-                    return;
-                }
+                this.handleActionInput();
+                return;
             }
 
-            if (!this.isStarted || this.isGameOver) {
+            if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') {
+                event.preventDefault();
+                this.handleBoost();
                 return;
             }
 
             if (event.code === 'ArrowLeft' || event.code === 'KeyA') {
-                this.player.moveLeft();
+                this.handleMoveInput('left');
             }
 
             if (event.code === 'ArrowRight' || event.code === 'KeyD') {
-                this.player.moveRight();
+                this.handleMoveInput('right');
             }
         });
+
+        this.bindControlButton(this.startButtonElement, () => this.handleActionInput());
+        this.bindControlButton(this.restartButtonElement, () => this.handleActionInput());
+        this.bindControlButton(this.boostButtonElement, () => this.handleBoost());
+        this.bindControlButton(this.moveLeftButtonElement, () => this.handleMoveInput('left'));
+        this.bindControlButton(this.moveRightButtonElement, () => this.handleMoveInput('right'));
+    }
+
+    bindControlButton(button, handler) {
+        if (!button) {
+            return;
+        }
+
+        let lastPointerActivation = 0;
+
+        const activateButton = (event) => {
+            if ('button' in event && event.button !== 0) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            lastPointerActivation = performance.now();
+            button.classList.add('is-pressing');
+            handler();
+        };
+
+        const releaseButton = () => {
+            button.classList.remove('is-pressing');
+        };
+
+        button.addEventListener('pointerdown', activateButton);
+        button.addEventListener('pointerup', releaseButton);
+        button.addEventListener('pointercancel', releaseButton);
+        button.addEventListener('pointerleave', releaseButton);
+
+        button.addEventListener('click', (event) => {
+            if (performance.now() - lastPointerActivation < 350) {
+                return;
+            }
+
+            activateButton(event);
+            releaseButton();
+        });
+
+        button.addEventListener(
+            'touchstart',
+            (event) => {
+                if (window.PointerEvent) {
+                    return;
+                }
+
+                activateButton(event);
+            },
+            { passive: false }
+        );
+
+        button.addEventListener('touchend', releaseButton);
+        button.addEventListener('touchcancel', releaseButton);
+
+        button.addEventListener('keydown', (event) => {
+            if (event.code !== 'Enter' && event.code !== 'Space') {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            handler();
+        });
+    }
+
+    handleActionInput() {
+        if (!this.isStarted) {
+            this.beginGame();
+            return;
+        }
+
+        if (this.isGameOver) {
+            this.restart();
+        }
+    }
+
+    handleMoveInput(direction) {
+        if (!this.isStarted || this.isGameOver) {
+            return;
+        }
+
+        if (direction === 'left') {
+            this.player.moveLeft();
+            return;
+        }
+
+        if (direction === 'right') {
+            this.player.moveRight();
+        }
+    }
+
+    handleBoost() {
+        if (!this.isStarted || this.isGameOver) {
+            return;
+        }
+
+        if (this.isBoostActive() || this.boostCooldownRemaining > 0) {
+            return;
+        }
+
+        this.boostTimeRemaining = BOOST_DURATION;
+        this.boostCooldownRemaining = BOOST_DURATION + BOOST_COOLDOWN;
+        this.updateControlState();
+    }
+
+    isBoostActive() {
+        return this.boostTimeRemaining > 0;
+    }
+
+    getRunSpeed() {
+        if (!this.isBoostActive()) {
+            return this.speed;
+        }
+
+        return Math.min(this.speed * BOOST_MULTIPLIER, MAX_SPEED * BOOST_MULTIPLIER);
+    }
+
+    updateBoost(deltaTime) {
+        this.boostTimeRemaining = Math.max(0, this.boostTimeRemaining - deltaTime);
+        this.boostCooldownRemaining = Math.max(0, this.boostCooldownRemaining - deltaTime);
+    }
+
+    updateControlState() {
+        const isRunning = this.isStarted && !this.isGameOver;
+        const isBoosting = this.isBoostActive();
+        const isBoostCooling = isRunning && !isBoosting && this.boostCooldownRemaining > 0;
+
+        if (this.virtualControlsElement) {
+            this.virtualControlsElement.classList.toggle('is-running', isRunning);
+            this.virtualControlsElement.classList.toggle('is-ended', this.isGameOver);
+            this.virtualControlsElement.classList.toggle('is-boosting', isBoosting);
+        }
+
+        if (this.bottomControlsElement) {
+            let statusText = 'TAP START';
+
+            if (this.isGameOver) {
+                statusText = 'TAP RESTART';
+            } else if (isBoosting) {
+                statusText = 'BOOST ENGAGED';
+            } else if (isBoostCooling) {
+                statusText = 'BOOST CHARGING';
+            } else if (isRunning) {
+                statusText = 'BOOST READY';
+            }
+
+            this.bottomControlsElement.textContent = statusText;
+        }
+
+        if (this.boostButtonElement) {
+            this.boostButtonElement.disabled = !isRunning || isBoostCooling;
+            this.boostButtonElement.classList.toggle('is-active', isBoosting);
+            this.boostButtonElement.classList.toggle('is-cooling', isBoostCooling);
+        }
+
+        if (this.moveLeftButtonElement) {
+            this.moveLeftButtonElement.disabled = !isRunning;
+        }
+
+        if (this.moveRightButtonElement) {
+            this.moveRightButtonElement.disabled = !isRunning;
+        }
     }
 
     setupResize() {
@@ -326,7 +500,7 @@ export class Game {
         this.isGameOver = false;
         this.startScreenElement.classList.add('hidden');
         this.gameOverPanelElement.classList.add('hidden');
-        this.bottomControlsElement.textContent = 'A/D MOVE';
+        this.updateControlState();
         this.clock.getDelta();
     }
 
@@ -354,9 +528,10 @@ export class Game {
         this.fragmentsElement.textContent = Math.floor(this.fragments).toString();
         this.phaseElement.textContent = this.phase.toString();
 
-        const speedPercent = THREE.MathUtils.clamp((this.speed / MAX_SPEED) * 100, 0, 100);
+        const displayedSpeed = this.getRunSpeed();
+        const speedPercent = THREE.MathUtils.clamp((displayedSpeed / MAX_SPEED) * 100, 0, 100);
         this.speedFillElement.style.width = `${speedPercent}%`;
-        this.velocityElement.textContent = `${Math.floor(this.speed * 20)} KPH`;
+        this.velocityElement.textContent = `${Math.floor(displayedSpeed * 20)} KPH`;
     }
 
     checkCollision() {
@@ -373,6 +548,8 @@ export class Game {
 
     gameOver() {
         this.isGameOver = true;
+        this.boostTimeRemaining = 0;
+        this.boostCooldownRemaining = 0;
 
         const currentScore = Math.floor(this.score);
 
@@ -385,7 +562,7 @@ export class Game {
         this.finalScoreElement.textContent = currentScore.toString();
         this.gameOverHighScoreElement.textContent = this.highScore.toString();
         this.gameOverPanelElement.classList.remove('hidden');
-        this.bottomControlsElement.textContent = 'SPACE RESTART';
+        this.updateControlState();
     }
 
     restart() {
@@ -395,13 +572,15 @@ export class Game {
         this.score = 0;
         this.fragments = 0;
         this.phase = 1;
+        this.boostTimeRemaining = 0;
+        this.boostCooldownRemaining = 0;
 
         this.player.reset();
         this.obstacleManager.reset();
         this.startScreenElement.classList.add('hidden');
         this.gameOverPanelElement.classList.add('hidden');
-        this.bottomControlsElement.textContent = 'A/D MOVE';
         this.updateHud();
+        this.updateControlState();
         this.clock.getDelta();
     }
 
@@ -421,7 +600,12 @@ export class Game {
         this.updateEnvironment(deltaTime);
 
         if (this.isStarted && !this.isGameOver) {
-            this.score += deltaTime * 10;
+            this.updateBoost(deltaTime);
+
+            const runSpeed = this.getRunSpeed();
+            const scoreMultiplier = this.isBoostActive() ? BOOST_MULTIPLIER : 1;
+
+            this.score += deltaTime * 10 * scoreMultiplier;
             this.speed = Math.min(this.speed + deltaTime * 0.2, MAX_SPEED);
             this.fragments = THREE.MathUtils.clamp(
                 this.fragments + deltaTime * 2,
@@ -430,9 +614,10 @@ export class Game {
             );
 
             this.player.update(deltaTime);
-            this.obstacleManager.update(deltaTime, this.speed);
+            this.obstacleManager.update(deltaTime, runSpeed);
             this.checkCollision();
             this.updateHud();
+            this.updateControlState();
 
             // Scale spawn rate with phase for smoother difficulty curve
             this.obstacleManager.spawnInterval = SPAWN_INTERVALS[this.phase];

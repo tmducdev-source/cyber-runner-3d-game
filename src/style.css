@@ -206,26 +206,308 @@ canvas {
     transition: width 120ms linear;
 }
 
-.bottom-controls {
+.virtual-controls {
     position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 30;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    justify-items: center;
+    gap: clamp(18px, 5.4vw, 86px);
+    height: clamp(180px, 20vh, 220px);
+    padding: 48px clamp(24px, 7vw, 92px) calc(24px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid rgba(0, 245, 255, 0.34);
+    border-radius: 36px 36px 0 0;
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(0, 245, 255, 0.22), transparent 46%),
+        radial-gradient(ellipse at 22% 92%, rgba(255, 43, 214, 0.22), transparent 38%),
+        linear-gradient(180deg, rgba(10, 5, 25, 0.55), rgba(3, 4, 14, 0.84));
+    box-shadow:
+        0 -18px 50px rgba(0, 245, 255, 0.16),
+        0 -24px 70px rgba(255, 43, 214, 0.10),
+        inset 0 1px 26px rgba(0, 245, 255, 0.10);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.virtual-controls::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -12%;
+    width: 124%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--magenta), var(--cyan), var(--magenta), transparent);
+    box-shadow:
+        0 0 18px rgba(0, 245, 255, 0.82),
+        0 0 28px rgba(255, 43, 214, 0.66);
+    animation: controlEdgeFlow 3.6s linear infinite;
+}
+
+.virtual-controls::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(rgba(255, 255, 255, 0.035) 50%, transparent 50%),
+        linear-gradient(90deg, transparent 0 13%, rgba(0, 245, 255, 0.13) 13% 13.4%, transparent 13.4% 36%, rgba(255, 43, 214, 0.13) 36% 36.35%, transparent 36.35% 100%),
+        linear-gradient(135deg, transparent 0 46%, rgba(0, 245, 255, 0.08) 46% 46.45%, transparent 46.45% 100%);
+    background-size: 100% 5px, 168px 100%, 220px 100%;
+    opacity: 0.56;
+    pointer-events: none;
+}
+
+.control-status {
+    position: absolute;
+    top: 16px;
     left: 50%;
-    bottom: 18px;
-    z-index: 10;
-    padding: 10px 18px;
+    z-index: 2;
+    min-width: 148px;
+    padding: 8px 16px;
     transform: translateX(-50%);
-    border: 1px solid var(--magenta-soft);
-    background: rgba(5, 7, 18, 0.72);
+    border: 1px solid rgba(255, 43, 214, 0.42);
+    background: rgba(5, 7, 18, 0.56);
     color: var(--text);
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     font-weight: 900;
     text-align: center;
     text-shadow: 0 0 10px rgba(0, 245, 255, 0.78);
     box-shadow:
         0 0 18px rgba(255, 43, 214, 0.18),
         inset 0 0 18px rgba(0, 245, 255, 0.08);
-    backdrop-filter: blur(10px);
+    clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
     pointer-events: none;
     white-space: nowrap;
+}
+
+.control-button {
+    --control-color: var(--cyan);
+    --control-soft: rgba(0, 245, 255, 0.42);
+    --control-deep: rgba(0, 245, 255, 0.11);
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    border: 1px solid var(--control-color);
+    border-radius: 12px;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent 23%),
+        linear-gradient(155deg, rgba(2, 10, 26, 0.78), rgba(24, 6, 33, 0.82)),
+        rgba(0, 0, 0, 0.48);
+    color: var(--control-color);
+    font: inherit;
+    font-weight: 900;
+    letter-spacing: 0;
+    text-shadow:
+        0 0 12px var(--control-color),
+        0 0 26px var(--control-soft);
+    box-shadow:
+        0 0 24px var(--control-soft),
+        0 0 46px var(--control-deep),
+        inset 0 0 24px var(--control-deep),
+        inset 0 1px 18px rgba(255, 255, 255, 0.08);
+    clip-path: polygon(12% 0, 88% 0, 100% 24%, 92% 100%, 8% 100%, 0 24%);
+    cursor: pointer;
+    pointer-events: auto;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+        transform 150ms ease,
+        filter 150ms ease,
+        opacity 150ms ease,
+        box-shadow 150ms ease,
+        border-color 150ms ease;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.control-button::before {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    z-index: -1;
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    background:
+        linear-gradient(90deg, transparent 0 18%, var(--control-soft) 18% 19%, transparent 19% 67%, var(--control-soft) 67% 68%, transparent 68% 100%),
+        linear-gradient(rgba(255, 255, 255, 0.045) 50%, transparent 50%);
+    background-size: 100% 100%, 100% 6px;
+    clip-path: inherit;
+    opacity: 0.92;
+}
+
+.control-button::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+        radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.18), transparent 34%),
+        linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+    opacity: 0.16;
+    transform: translateX(-72%);
+    transition: transform 260ms ease, opacity 160ms ease;
+}
+
+.control-button:hover:not(:disabled),
+.control-button:focus-visible {
+    transform: scale(1.04);
+    filter: brightness(1.2);
+    box-shadow:
+        0 0 34px var(--control-soft),
+        0 0 68px var(--control-deep),
+        inset 0 0 30px var(--control-deep),
+        inset 0 1px 20px rgba(255, 255, 255, 0.12);
+}
+
+.control-button:hover:not(:disabled)::after,
+.control-button:focus-visible::after {
+    opacity: 0.36;
+    transform: translateX(72%);
+}
+
+.control-button:focus-visible {
+    outline: 2px solid var(--text);
+    outline-offset: 5px;
+}
+
+.control-button:active:not(:disabled),
+.control-button.is-pressing:not(:disabled) {
+    transform: scale(0.96);
+    filter: brightness(1.36);
+    animation: controlClickFlash 180ms ease;
+}
+
+.control-button:disabled {
+    cursor: default;
+    opacity: 0.32;
+}
+
+.control-circuit {
+    position: absolute;
+    z-index: 1;
+    width: 38%;
+    height: 1px;
+    background: var(--control-color);
+    box-shadow: 0 0 10px var(--control-color);
+    opacity: 0.78;
+}
+
+.control-circuit::after {
+    content: "";
+    position: absolute;
+    top: -3px;
+    width: 7px;
+    height: 7px;
+    border: 1px solid var(--control-color);
+    background: rgba(2, 8, 22, 0.9);
+    box-shadow: 0 0 10px var(--control-color);
+}
+
+.control-circuit-a {
+    top: 20px;
+    left: 16px;
+}
+
+.control-circuit-a::after {
+    right: -8px;
+}
+
+.control-circuit-b {
+    right: 16px;
+    bottom: 18px;
+}
+
+.control-circuit-b::after {
+    left: -8px;
+}
+
+.control-icon {
+    position: relative;
+    z-index: 2;
+    line-height: 1;
+}
+
+.control-button-move {
+    width: clamp(150px, 16vw, 190px);
+    height: clamp(86px, 9vw, 110px);
+    font-size: clamp(3.2rem, 5.2vw, 4.8rem);
+    line-height: 1;
+}
+
+.control-button-left {
+    --control-color: var(--magenta);
+    --control-soft: rgba(255, 43, 214, 0.48);
+    --control-deep: rgba(255, 43, 214, 0.14);
+}
+
+.control-button-right {
+    --control-color: var(--cyan);
+    --control-soft: rgba(0, 245, 255, 0.48);
+    --control-deep: rgba(0, 245, 255, 0.14);
+}
+
+.control-button-boost {
+    --control-color: #8afcff;
+    --control-soft: rgba(0, 245, 255, 0.58);
+    --control-deep: rgba(255, 43, 214, 0.18);
+    width: clamp(220px, 22vw, 260px);
+    height: clamp(82px, 8vw, 96px);
+    border-color: rgba(138, 252, 255, 0.9);
+    color: var(--text);
+    background:
+        radial-gradient(circle at 50% 50%, rgba(255, 43, 214, 0.24), transparent 58%),
+        linear-gradient(100deg, rgba(0, 245, 255, 0.20), rgba(255, 43, 214, 0.18)),
+        rgba(4, 7, 22, 0.86);
+    box-shadow:
+        0 0 30px rgba(0, 245, 255, 0.44),
+        0 0 58px rgba(255, 43, 214, 0.28),
+        inset 0 0 28px rgba(0, 245, 255, 0.14),
+        inset 0 0 18px rgba(255, 43, 214, 0.12);
+    clip-path: polygon(13% 0, 87% 0, 100% 50%, 87% 100%, 13% 100%, 0 50%);
+}
+
+.boost-shell {
+    position: relative;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--text);
+    font-size: clamp(1.1rem, 2vw, 1.5rem);
+    font-weight: 900;
+    letter-spacing: 0.18em;
+    text-shadow:
+        0 0 12px rgba(0, 245, 255, 0.9),
+        0 0 28px rgba(255, 43, 214, 0.62);
+}
+
+.boost-bolt {
+    width: 24px;
+    height: 24px;
+    fill: var(--magenta);
+    filter:
+        drop-shadow(0 0 8px rgba(255, 43, 214, 0.95))
+        drop-shadow(0 0 12px rgba(0, 245, 255, 0.65));
+}
+
+.control-button-boost.is-active {
+    animation: boostSurge 420ms ease-in-out infinite alternate;
+}
+
+.control-button-boost.is-cooling {
+    filter: saturate(0.72);
+}
+
+.virtual-controls.is-boosting::before {
+    height: 5px;
+    animation-duration: 1.2s;
 }
 
 .screen-panel {
@@ -234,7 +516,7 @@ canvas {
     z-index: 20;
     display: grid;
     place-items: center;
-    padding: 24px;
+    padding: 24px 24px calc(132px + env(safe-area-inset-bottom, 0px));
     background:
         linear-gradient(135deg, rgba(0, 245, 255, 0.08), transparent 34%, rgba(255, 43, 214, 0.09)),
         radial-gradient(circle at 50% 42%, rgba(0, 245, 255, 0.12), transparent 34%),
@@ -328,6 +610,29 @@ h2 {
     animation: promptPulse 1.35s ease-in-out infinite alternate;
 }
 
+.panel-action-button {
+    font: inherit;
+    letter-spacing: 0;
+    cursor: pointer;
+    transition:
+        transform 150ms ease,
+        filter 150ms ease,
+        box-shadow 150ms ease;
+}
+
+.panel-action-button:hover,
+.panel-action-button:focus-visible {
+    transform: scale(1.04);
+    filter: brightness(1.2);
+    outline: 2px solid var(--text);
+    outline-offset: 4px;
+}
+
+.panel-action-button:active,
+.panel-action-button.is-pressing {
+    transform: scale(0.96);
+}
+
 .result-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -398,14 +703,103 @@ h2 {
         font-size: 2rem;
     }
 
-    .bottom-controls {
-        bottom: 10px;
-        width: calc(100vw - 20px);
-        font-size: 0.68rem;
+    .virtual-controls {
+        gap: clamp(8px, 2.5vw, 14px);
+        height: clamp(128px, 18vh, 156px);
+        padding: 34px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+        border-radius: 22px 22px 0 0;
+    }
+
+    .control-status {
+        top: 8px;
+        min-width: 116px;
+        padding: 6px 12px;
+        font-size: 0.58rem;
+    }
+
+    .control-button-move {
+        width: clamp(82px, 24vw, 104px);
+        height: clamp(58px, 15vw, 70px);
+        font-size: clamp(2rem, 8vw, 2.85rem);
+    }
+
+    .control-button-boost {
+        width: clamp(126px, 36vw, 154px);
+        height: clamp(56px, 14vw, 68px);
+    }
+
+    .boost-shell {
+        gap: 6px;
+        font-size: clamp(0.78rem, 3.4vw, 1rem);
+        letter-spacing: 0.1em;
+    }
+
+    .boost-bolt {
+        width: 18px;
+        height: 18px;
+    }
+
+    .control-circuit {
+        width: 30%;
+    }
+
+    .control-circuit-a {
+        top: 13px;
+        left: 10px;
+    }
+
+    .control-circuit-b {
+        right: 10px;
+        bottom: 12px;
     }
 
     .screen-panel {
-        padding: 16px;
+        padding: 16px 16px calc(156px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+@keyframes controlEdgeFlow {
+    from {
+        transform: translateX(-10%);
+    }
+
+    to {
+        transform: translateX(10%);
+    }
+}
+
+@keyframes controlClickFlash {
+    0%,
+    100% {
+        box-shadow:
+            0 0 26px var(--control-soft),
+            0 0 48px var(--control-deep),
+            inset 0 0 24px var(--control-deep);
+    }
+
+    50% {
+        box-shadow:
+            0 0 44px var(--control-soft),
+            0 0 90px var(--control-deep),
+            inset 0 0 40px var(--control-deep);
+    }
+}
+
+@keyframes boostSurge {
+    from {
+        filter: brightness(1.1);
+        box-shadow:
+            0 0 34px rgba(0, 245, 255, 0.52),
+            0 0 62px rgba(255, 43, 214, 0.32),
+            inset 0 0 28px rgba(0, 245, 255, 0.18);
+    }
+
+    to {
+        filter: brightness(1.38);
+        box-shadow:
+            0 0 52px rgba(0, 245, 255, 0.76),
+            0 0 94px rgba(255, 43, 214, 0.48),
+            inset 0 0 42px rgba(255, 43, 214, 0.22);
     }
 }
 

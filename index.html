@@ -25,7 +25,9 @@
         <p class="eyebrow">Neural link standby</p>
         <h1 id="startTitle">Memory Collapse</h1>
         <p class="panel-copy">Run the breach. Dodge corrupt blocks. Keep the stream alive.</p>
-        <p class="prompt">Press SPACE to Start</p>
+        <button id="startButton" class="prompt panel-action-button" type="button">
+          START RUN
+        </button>
       </div>
     </section>
 
@@ -70,7 +72,50 @@
       </section>
     </main>
 
-    <div id="bottomControls" class="bottom-controls">SPACE START</div>
+    <div
+      id="virtualControls"
+      class="virtual-controls"
+      role="group"
+      aria-label="Game controls"
+    >
+      <div id="bottomControls" class="control-status">TAP START</div>
+
+      <button
+        id="moveLeftButton"
+        class="control-button control-button-move control-button-left"
+        type="button"
+        aria-label="Move left"
+      >
+        <span class="control-circuit control-circuit-a" aria-hidden="true"></span>
+        <span class="control-circuit control-circuit-b" aria-hidden="true"></span>
+        <span class="control-icon" aria-hidden="true">&laquo;</span>
+      </button>
+
+      <button
+        id="boostButton"
+        class="control-button control-button-boost"
+        type="button"
+        aria-label="Boost speed"
+      >
+        <span class="boost-shell" aria-hidden="true">
+          <svg class="boost-bolt" viewBox="0 0 24 24" focusable="false">
+            <path d="M13 2 4 14h7l-1 8 10-13h-7l1-7z"></path>
+          </svg>
+          <span>BOOST</span>
+        </span>
+      </button>
+
+      <button
+        id="moveRightButton"
+        class="control-button control-button-move control-button-right"
+        type="button"
+        aria-label="Move right"
+      >
+        <span class="control-circuit control-circuit-a" aria-hidden="true"></span>
+        <span class="control-circuit control-circuit-b" aria-hidden="true"></span>
+        <span class="control-icon" aria-hidden="true">&raquo;</span>
+      </button>
+    </div>
 
     <section
       id="gameOverPanel"
@@ -93,7 +138,9 @@
           </div>
         </div>
 
-        <p class="prompt">Press SPACE to Restart</p>
+        <button id="restartButton" class="prompt panel-action-button" type="button">
+          RESTART RUN
+        </button>
       </div>
     </section>
 
